@@ -3,6 +3,7 @@ package objsets
 import TweetReader._
 
 
+
 /**
   * This represents a set of objects of type `Tweet` in the form of a binary search
   * tree. Every branch in the tree has two children (two `TweetSet`s). There is an
@@ -34,7 +35,7 @@ abstract class TweetSet {
     * and be implemented in the subclasses?
     */
   def filter(p: Tweet => Boolean): TweetSet =
-    ??? // TODO: filter elements
+    filter0(p, EmptySet)
 
   /**
     * This is a helper method for `filter` that propagetes the accumulated tweets.
@@ -47,8 +48,7 @@ abstract class TweetSet {
     * Question: Should we implement this method here, or should it remain abstract
     * and be implemented in the subclasses?
     */
-  def union(that: TweetSet): TweetSet =
-    ??? //TODO : union
+  def union(that: TweetSet): TweetSet
 
   /**
     * Returns a list containing all tweets of this set, sorted by retweet count
@@ -59,8 +59,14 @@ abstract class TweetSet {
     * Question: Should we implement this method here, or should it remain abstract
     * and be implemented in the subclasses?
     */
-  def ascendingByRetweet: Trending =
-    ??? //TODO: construct the list of tweets ordered by retweet count
+  def ascendingByRetweet: Trending = {
+     def iter(set: TweetSet, acc: Trending): Trending = {
+      if (set.isEmpty) acc
+      else iter(set.remove(set.findMin0(set.head)),acc.+(set.findMin0(set.head)))
+    }
+
+    iter(this, new EmptyTrending)
+  }
 
   // The following methods are provided for you, and do not have to be changed
   // -------------------------------------------------------------------------
@@ -130,11 +136,13 @@ object EmptySet extends TweetSet {
   def tail = throw new Exception("EmptySet.tail")
 
   def remove(tw: Tweet): TweetSet = this
+  
+  def union(that: TweetSet) : TweetSet = that
 
   // -------------------------------------------------------------------------
 
   def filter0(p: Tweet => Boolean, acc: TweetSet): TweetSet =
-    ??? //TODO : you can implement the helper function in EmptySet
+    EmptySet
 
 }
 
@@ -160,6 +168,12 @@ class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
 
   def tail = if (left.isEmpty) right else new NonEmpty(elem, left.tail, right)
 
+  def union(that: TweetSet) : TweetSet = {
+    if (that.isEmpty) this
+    else if (contains(that.head)) union(that.tail)
+    else union(that.tail).incl(that.head)
+  }
+  
   def remove(tw: Tweet): TweetSet =
     if (tw.text < elem.text) new NonEmpty(elem, left.remove(tw), right)
     else if (elem.text < tw.text) new NonEmpty(elem, left, right.remove(tw))
@@ -167,8 +181,19 @@ class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
 
   // -------------------------------------------------------------------------
 
-  def filter0(p: Tweet => Boolean, acc: TweetSet): TweetSet =
-    ??? //TODO : you can implement the helper function in the NonEmpty set
+  def filter0(p: Tweet => Boolean, acc: TweetSet): TweetSet = {
+
+    if (p(elem)) {
+
+      if (!left.isEmpty) left.filter0(p,acc.incl(elem)).union(right.filter0(p,acc))
+      else if (!right.isEmpty) right.filter0(p,acc.incl(elem).union(left.filter0(p,acc)))
+      else  acc.incl(elem)
+    }
+    else {
+      if (!left.isEmpty) left.filter0(p,acc).union(right.filter0(p,acc))
+      else if (!right.isEmpty) right.filter0(p,acc).union(left.filter0(p,acc))
+      else acc
+    }
+  }
 
 }
-

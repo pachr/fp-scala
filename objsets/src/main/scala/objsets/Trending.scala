@@ -20,8 +20,8 @@ abstract class Trending {
   }
 }
 
-object EmptyTrending extends Trending {
-  def +(tw: Tweet) = new NonEmptyTrending(tw, EmptyTrending)
+class EmptyTrending extends Trending {
+  def +(tw: Tweet) = new NonEmptyTrending(tw, new EmptyTrending)
 
   def head: Tweet = throw new Exception
 
